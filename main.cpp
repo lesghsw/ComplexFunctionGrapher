@@ -1,17 +1,14 @@
 #include <math.h>
 #include <complex>
 #include <thread>
-//#include <gsl/gsl_sf_gamma.h> todo
 #include <SDL2/SDL.h>
 #include <iostream>
-#include <chrono>
 
 using namespace std::complex_literals;
-using std::cout, std::endl;
 
-int WID = 1008;
+int WID = 1000;
 int HGT = 800;
-int MAXT = 24;
+int MAXT = 12;
 
 struct LES_hsl {
     float h = 0.0f, s = 0.0f, l = 0.0f;
@@ -91,10 +88,44 @@ void StW(iv2d S, fv2d &W) {
     W.y = (float)S.y / Scal.y + Off.y;
 }
 
+/// TODO: Rewrite everything to use double precision
+
+std::complex<float> lanczos_g(7);
+std::complex<float> lanczos_p[] = {
+    {676.5203681,0},
+    {-1259.1392167,0},
+    {771.3234287,0},
+    {-176.6150291,0},
+    {12.5073432,0},
+    {-0.1385710,0},
+    {9.9843695780195716e-6,0},
+    {1.5056327351493116e-7,0}
+};
+
+std::complex<float> gamma(std::complex<float> z) {
+    std::complex<float> t;
+    std::complex<float> pi(M_PI, 0);
+    std::complex<float> one(1, 0);
+    std::complex<float> half(0.5, 0);
+    std::complex<float> ci(1, 0);
+    std::complex<float> x(1,0);
+    if (z.real() < 0.5)
+        return pi / (sin(pi * z) * gamma(one - z));
+    else {
+        z -= one;
+        for (int i = 0; i < 8; i+=1) {
+            x += lanczos_p[i] / (z + ci);
+            ci+=one;
+        }
+        t = z + lanczos_g + half;
+        return sqrt((one+one) * pi) * pow(t, (z + half)) * exp(-t) * x;
+    }
+}
+
 std::complex<float> complexFunc(std::complex<float> z) {
     //return ((z*z-1.0f)*(z-2.0f-1if)) / (z*z+2.0f+2if);
     //return sqrt(1.0f-z*z);
-    return log(z);
+    return gamma(z);
 }
 
 void wZU(SDL_Window* wn, short ZU) {
@@ -152,20 +183,16 @@ void fCalcRN(SDL_Surface* outsf, int bWID, int eWID, unsigned short rnType) {
 
 int main(int argc, char **argv) {
     SDL_Init(SDL_INIT_EVERYTHING);
-    SDL_Window *wn = SDL_CreateWindow("Complex graph", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WID, HGT, SDL_WINDOW_SHOWN); // | SDL_WINDOW_RESIZABLE);
+    SDL_Window *wn = SDL_CreateWindow("Complex graph", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WID, HGT, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
     SDL_Surface *wnsf = SDL_GetWindowSurface(wn);
     SDL_Surface *outsf = SDL_CreateRGBSurfaceWithFormat(0x0, WID, HGT, 32, SDL_PIXELFORMAT_RGBX8888);
     SDL_Event event;
     std::thread t[MAXT];
     unsigned short rnType = 0;
     bool tHeld = 0, run = 1;
-    auto start = std::chrono::high_resolution_clock::now();
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = duration_cast<std::chrono::microseconds>(end-start);
     while (run) {
-        start = std::chrono::high_resolution_clock::now();
         SDL_LockSurface(outsf);
-
+        
         while (SDL_PollEvent(&event)) {
             if(event.type == SDL_QUIT) run = 0;
             else if (event.type == SDL_MOUSEWHEEL) {
@@ -188,32 +215,35 @@ int main(int argc, char **argv) {
             else if (event.type == SDL_MOUSEBUTTONUP)
                 mHeld = 0;
             if (event.type == SDL_MOUSEMOTION && mHeld)
-                    mouseDragged(getMousePos(wn));
+                mouseDragged(getMousePos(wn));
             
-            // Works but suffers black border because of multithreading
-            // TODO: find a good way to divide the screen in stripes.
-            /*if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 WID = event.window.data1;
                 HGT = event.window.data2;
                 free(outsf);
                 outsf = SDL_CreateRGBSurfaceWithFormat(0x0, WID, HGT, 32, SDL_PIXELFORMAT_RGBX8888);
                 SDL_DestroyWindowSurface(wn);
                 wnsf = SDL_GetWindowSurface(wn);
-                int MAXT = 0;
-                for (int i = std::sqrt(WID); i > 1; i--) {
-                    if (WID % i == 0) MAXT = i;
-                }
-            }*/
+            }
         }
-        for (int i = 0; i < MAXT; i++)
-            t[i] = std::thread(fCalcRN, outsf, WID / MAXT * i, WID / MAXT * (i+1), rnType);
+        int partWid = WID / MAXT;
+        int start = 0;
+        for (int i = 0; i < MAXT-1; i++) {
+            t[i] = std::thread(fCalcRN, outsf, start, start + partWid, rnType);
+            start += partWid;
+        }
+        t[MAXT-1] = std::thread(fCalcRN, outsf, start, WID, rnType);
         for (int i = 0; i < MAXT; i++)
             t[i].join();
+        
         SDL_UnlockSurface(outsf);
         SDL_BlitSurface(outsf, 0x0, wnsf, 0x0);
         SDL_UpdateWindowSurface(wn);
         SDL_Delay(1000.0f / 60.0f);
     }
+    
+    std::cout << real(gamma({20,0})) << std::endl;
+    
     SDL_DestroyWindowSurface(wn);
     SDL_DestroyWindow(wn);
     free(outsf);
