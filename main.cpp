@@ -214,8 +214,10 @@ int main(int argc, char **argv) {
             }
             else if (event.type == SDL_MOUSEBUTTONUP)
                 mHeld = 0;
-            if (event.type == SDL_MOUSEMOTION && mHeld)
-                mouseDragged(getMousePos(wn));
+            if (event.type == SDL_MOUSEMOTION && mHeld) {
+                iv2d mPos = getMousePos(wn);
+                if (mPos.x > 0) mouseDragged(mPos);
+            }
             
             if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
                 WID = event.window.data1;
