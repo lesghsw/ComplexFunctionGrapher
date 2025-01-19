@@ -2,7 +2,6 @@
 #include <complex>
 #include <thread>
 #include <SDL2/SDL.h>
-#include <iostream>
 
 using namespace std::complex_literals;
 
@@ -243,8 +242,6 @@ int main(int argc, char **argv) {
         SDL_UpdateWindowSurface(wn);
         SDL_Delay(1000.0f / 60.0f);
     }
-    
-    std::cout << real(gamma({20,0})) << std::endl;
     
     SDL_DestroyWindowSurface(wn);
     SDL_DestroyWindow(wn);
