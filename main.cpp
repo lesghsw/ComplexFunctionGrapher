@@ -163,8 +163,8 @@ void fCalcRN(SDL_Surface* outsf, int bWID, int eWID, unsigned short rnType) {
             LES_hsl hslColor;
             if (rnType == 0) hslColor = { narg * 360.0f, 1.0f, std::tanhf(SDL_logf(0.1f * abs + 1.3f) - 0.1f) };
             else if (rnType == 1) {
-                if (abs > 0.228f) hslColor = { narg * 360.0f, 1.0f, std::tanhf(0.2f * std::abs(1.0f / SDL_sinf(M_PI * abs))) - 0.1f };
-                else hslColor = { narg * 360.0f, 1.0f, abs*abs*abs * 43.12f + -abs*abs * 28 + abs * 5 };
+                if (abs > 0.2183f) hslColor = { narg * 360.0f, 1.0f, std::tanhf(0.2f * std::abs(1.0f / SDL_sinf(M_PI * abs))) - 0.1f };
+                else hslColor = { narg * 360.0f, 1.0f, abs*abs*abs * 42.12f + -abs*abs * 25.3f + abs * 4.0f + 0.1f };
             }
             else {
                 if (abs > 0.3314f) hslColor = { narg * 360.0f, 1.0f, std::tanhf(0.4f * SDL_abs(1.0f / SDL_sinf(M_PI * abs))) - 0.15f };
